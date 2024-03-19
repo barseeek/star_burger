@@ -1,9 +1,11 @@
 import json
 
 import phonenumbers
+from django.db import IntegrityError
 from django.http import JsonResponse
 from django.templatetags.static import static
 from phonenumber_field.phonenumber import PhoneNumber
+from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -69,22 +71,42 @@ def register_order(request):
     except ValueError:
         return Response({
             'error': "Bad request"
-        }, status=400)
+        }, status=status.HTTP_400_BAD_REQUEST)
 
         # Валидация списка продуктов
     if not order_info.get('products') or not isinstance(order_info.get('products'), list):
         return Response({
             'error': "No products in order"
-        }, status=400)
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         phone_number = phonenumbers.parse(order_info.get('phonenumber'), 'RU')
         if not phonenumbers.is_valid_number(phone_number):
             raise ValueError
+        if (Order.objects.filter(
+            phone=phonenumbers.format_number(phone_number, phonenumbers.PhoneNumberFormat.E164)
+        ).exists()):
+            raise IntegrityError
     except (phonenumbers.NumberParseException, ValueError):
         return Response({
             'error': "Invalid phone number"
-        }, status=400)
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except IntegrityError:
+        return Response({
+            'error': "This phone number is using, try another one"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    if not order_info.get('firstname') or not isinstance(order_info.get('firstname'), str):
+        return Response({
+            'error': "Invalid firstname"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    if not order_info.get('lastname') or not isinstance(order_info.get('lastname'), str):
+        return Response({
+            'error': "Invalid lastname"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    if not order_info.get('address') or not isinstance(order_info.get('address'), str):
+        return Response({
+            'error': "Invalid address"
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     order = Order.objects.create(
         first_name=order_info.get('firstname'),
@@ -93,11 +115,21 @@ def register_order(request):
         address=order_info.get('address')
     )
 
-    for product in order_info['products']:
+    for product_info in order_info['products']:
+        try:
+            product = Product.objects.get(id=product_info['product'])
+        except Product.DoesNotExist:
+            order.delete()
+            return Response({
+                'error': f"Product with id {product_info['product']} does not exist"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         OrderItem.objects.create(
             order=order,
-            product=Product.objects.get(id=product['product']),
-            quantity=product['quantity']
+            product=product,
+            quantity=product_info['quantity']
         )
 
-    return Response({'success': f'Created order {order.pk}'})
+    return Response({
+        'success': f'Created order {order.pk}'
+    }, status=status.HTTP_201_CREATED)
