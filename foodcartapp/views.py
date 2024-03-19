@@ -72,7 +72,7 @@ def register_order(request):
         }, status=400)
 
         # Валидация списка продуктов
-    if not order_info.get('products'):
+    if not order_info.get('products') or not isinstance(order_info.get('products'), list):
         return Response({
             'error': "No products in order"
         }, status=400)
