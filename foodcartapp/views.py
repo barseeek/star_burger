@@ -1,15 +1,43 @@
-import json
-
 import phonenumbers
-from django.db import IntegrityError
+from django.db import transaction
 from django.http import JsonResponse
 from django.templatetags.static import static
-from phonenumber_field.phonenumber import PhoneNumber
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.serializers import CharField, IntegerField, ModelSerializer
 
-from .models import Product, Order, OrderItem
+from .models import Order, OrderItem, Product
+
+
+class OrderItemSerializer(ModelSerializer):
+    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
+    quantity = IntegerField()
+
+    class Meta:
+        model = OrderItem
+        fields = ('product', 'quantity')
+
+
+class OrderSerializer(ModelSerializer):
+    products = OrderItemSerializer(many=True, allow_empty=False)
+    firstname = CharField(source='first_name')
+    lastname = CharField(source='last_name')
+    phonenumber = CharField(source='phone')
+    address = CharField()
+
+    class Meta:
+        model = Order
+        fields = ('firstname', 'lastname', 'phonenumber', 'address', 'products')
+
+    def validate_phonenumber(self, value):
+        try:
+            phone_number = phonenumbers.parse(value, 'RU')
+            if not phonenumbers.is_valid_number(phone_number):
+                raise serializers.ValidationError("Invalid phone number")
+            return phonenumbers.format_number(phone_number, phonenumbers.PhoneNumberFormat.E164)
+        except phonenumbers.NumberParseException:
+            raise serializers.ValidationError("Invalid phone number")
 
 
 def banners_list_api(request):
@@ -66,70 +94,16 @@ def product_list_api(request):
 
 @api_view(['POST'])
 def register_order(request):
-    try:
-        order_info = request.data
-    except ValueError:
-        return Response({
-            'error': "Bad request"
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-        # Валидация списка продуктов
-    if not order_info.get('products') or not isinstance(order_info.get('products'), list):
-        return Response({
-            'error': "No products in order"
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        phone_number = phonenumbers.parse(order_info.get('phonenumber'), 'RU')
-        if not phonenumbers.is_valid_number(phone_number):
-            raise ValueError
-        if (Order.objects.filter(
-            phone=phonenumbers.format_number(phone_number, phonenumbers.PhoneNumberFormat.E164)
-        ).exists()):
-            raise IntegrityError
-    except (phonenumbers.NumberParseException, ValueError):
-        return Response({
-            'error': "Invalid phone number"
-        }, status=status.HTTP_400_BAD_REQUEST)
-    except IntegrityError:
-        return Response({
-            'error': "This phone number is using, try another one"
-        }, status=status.HTTP_400_BAD_REQUEST)
-    if not order_info.get('firstname') or not isinstance(order_info.get('firstname'), str):
-        return Response({
-            'error': "Invalid firstname"
-        }, status=status.HTTP_400_BAD_REQUEST)
-    if not order_info.get('lastname') or not isinstance(order_info.get('lastname'), str):
-        return Response({
-            'error': "Invalid lastname"
-        }, status=status.HTTP_400_BAD_REQUEST)
-    if not order_info.get('address') or not isinstance(order_info.get('address'), str):
-        return Response({
-            'error': "Invalid address"
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-    order = Order.objects.create(
-        first_name=order_info.get('firstname'),
-        last_name=order_info.get('lastname'),
-        phone=phonenumbers.format_number(phone_number, phonenumbers.PhoneNumberFormat.E164),
-        address=order_info.get('address')
-    )
-
-    for product_info in order_info['products']:
-        try:
-            product = Product.objects.get(id=product_info['product'])
-        except Product.DoesNotExist:
-            order.delete()
-            return Response({
-                'error': f"Product with id {product_info['product']} does not exist"
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        OrderItem.objects.create(
-            order=order,
-            product=product,
-            quantity=product_info['quantity']
+    serializer = OrderSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    with transaction.atomic():
+        order = Order.objects.create(
+            first_name=serializer.validated_data['first_name'],
+            last_name=serializer.validated_data['last_name'],
+            phone=serializer.validated_data['phone'],
+            address=serializer.validated_data['address']
         )
-
-    return Response({
-        'success': f'Created order {order.pk}'
-    }, status=status.HTTP_201_CREATED)
+        order_items_fields = serializer.validated_data['products']
+        order_items = [OrderItem(order=order, **fields) for fields in order_items_fields]
+        OrderItem.objects.bulk_create(order_items)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
