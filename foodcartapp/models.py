@@ -129,8 +129,9 @@ class OrderQueryset(models.QuerySet):
 
     def total_price(self):
         if self:
-            return Sum(F('items__product__price') * F('items__quantity'))
+            return Sum(F('items__price') * F('items__quantity'))
         return 0
+
 
 class Order(models.Model):
     address = models.CharField(max_length=255, verbose_name='Адрес')
@@ -153,6 +154,8 @@ class OrderItem(models.Model):
     product = models.ForeignKey(to='Product', on_delete=models.SET_DEFAULT, null=True, verbose_name="Товар",
                                 default=None)
     quantity = models.PositiveIntegerField(verbose_name='Количество')
+    price = models.DecimalField(max_digits=7, decimal_places=2, verbose_name='Стоимость',
+                                validators=[MinValueValidator(0)], null=True)
 
     class Meta:
         verbose_name = 'Элемент заказа'
