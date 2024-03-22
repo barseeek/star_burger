@@ -118,6 +118,7 @@ class OrderItemsInline(admin.TabularInline):
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('address', 'first_name', 'last_name', 'phone',)
     inlines = [OrderItemsInline, ]
+    readonly_fields = ('created_at',)
 
     def response_change(self, request, obj):
         res = super().response_change(request, obj)
