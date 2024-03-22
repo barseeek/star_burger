@@ -21,21 +21,36 @@
       <th>Клиент</th>
       <th>Телефон</th>
       <th>Адрес доставки</th>
+      <th>Рестораны</th>
       <th> Редактировать</th>
       <th> Комментарий</th>
     </tr>
 
-    {% for item in order_items %}
+    {% for item in items|dictsortreversed:"order.status" %}
       <tr>
-        <td>{{ item.pk }}</td>
-        <td>{{ item.get_status }}</td>
-        <td>{{ item.price }} руб.</td>
-        <td>{{ item.get_payment_type_display }}</td>        
-        <td>{{ item.last_name }} {{ item.first_name }}</td>
-        <td>{{ item.phone }}</td>
-        <td>{{ item.address }}</td>
-        <td><a href="{% url "admin:foodcartapp_order_change" object_id=item.pk  %}?next={{ request.get_full_path|urlencode }}">Редактировать</a></td>
-        <td>{{ item.comment }}</td>
+        <td>{{ item.order.pk }}</td>
+        <td>{{ item.order.get_status_display }}</td>
+        <td>{{ item.order.price }} руб.</td>
+        <td>{{ item.order.get_payment_type_display }}</td>
+        <td>{{ item.order.last_name }} {{ item.order.first_name }}</td>
+        <td>{{ item.order.phone }}</td>
+        <td>{{ item.order.address }}</td>
+        <td>
+          {% if item.order.cook %}
+            {{ item.order.cook }}
+          {% elif item.restaurants %}
+            <details>
+              <summary>Может быть приготовлен в:</summary>
+                {% for restaurant in item.restaurants %}
+                 <li>{{restaurant}}</li>
+                {% endfor %}
+            </details>
+            {% else %}
+              Нет доступных ресторанов
+          {% endif %}
+        </td>
+        <td><a href="{% url "admin:foodcartapp_order_change" object_id=item.order.pk  %}?next={{ request.get_full_path|urlencode }}">Редактировать</a></td>
+        <td>{{ item.order.comment }}</td>
       </tr>
     {% endfor %}
    </table>

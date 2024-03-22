@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from django import forms
 from django.db.models import F
 from django.shortcuts import redirect, render
@@ -8,8 +10,7 @@ from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 
-
-from foodcartapp.models import Product, Restaurant, Order
+from foodcartapp.models import Product, Restaurant, Order, RestaurantMenuItem, OrderItem
 
 
 class Login(forms.Form):
@@ -93,7 +94,32 @@ def view_restaurants(request):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
-    items = Order.objects.all().annotate(price=Order.objects.total_price())
+    rests = []
+    # available_products = RestaurantMenuItem.objects.filter(product__in=Product.objects.available())
+    # orders = Order.objects.all().annotate(price=Order.objects.total_price()).prefetch_related('items__product')
+    # for order in orders:
+    #     available_products = RestaurantMenuItem.objects.filter(product__in=OrderItem.objects.filter(product=), availability=True)
+    #     rests = [product.restaurant for product in available_products]
+
+    # Словарь для хранения возможных ресторанов для каждого заказа
+    order_restaurants = defaultdict(set)
+
+    for item in OrderItem.objects.select_related('order', 'product').all():
+        possible_restaurants = RestaurantMenuItem.objects.filter(
+            product=item.product,
+            availability=True
+        ).values_list('restaurant_id', flat=True)
+
+        if item.order_id not in order_restaurants or not order_restaurants[item.order_id]:
+            order_restaurants[item.order_id] = set(possible_restaurants)
+        else:
+            order_restaurants[item.order_id].intersection_update(possible_restaurants)
+
+    orders_with_restaurants = [{
+        'order': Order.objects.get(id=order_id),
+        'price': Order.objects.total_price(),
+        'restaurants': Restaurant.objects.filter(id__in=restaurant_ids)
+    } for order_id, restaurant_ids in order_restaurants.items()]
     return render(request, template_name='order_items.html', context={
-        'order_items': items,
+        'items': orders_with_restaurants
     })

@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from django.db.models import F, Sum
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from phonenumber_field.modelfields import PhoneNumberField
 
 
@@ -135,25 +136,32 @@ class OrderQueryset(models.QuerySet):
 
 
 class Order(models.Model):
-    CASH = 'cash'
-    CARD = 'card'
-    PAYMENT_CHOICES = [
-        (CASH, 'Наличные'),
-        (CARD, 'Картой онлайн')
-    ]
+    class OrderPaymentType(models.TextChoices):
+        CASH = 'cash', _('Наличные')
+        CARD = 'card', _('Картой онлайн')
+
+    class OrderStatus(models.TextChoices):
+        CREATED = 'created', _('Создан')
+        PROCESSED = 'processed', _('Обработан')
+        COOKING = 'cooking', _('Готовится')
+        DELIVERED = 'delivered', _('Доставлен')
+
     address = models.CharField(max_length=255, verbose_name='Адрес')
     first_name = models.CharField(max_length=255, verbose_name='Имя')
     last_name = models.CharField(max_length=255, verbose_name='Фамилия')
     phone = PhoneNumberField(verbose_name='Мобильный номер')
-    payment_type = models.CharField(choices=PAYMENT_CHOICES, max_length=10,
-                                    verbose_name='Тип оплаты', default=CARD)
+    payment_type = models.CharField(choices=OrderPaymentType.choices, max_length=10,
+                                    verbose_name='Тип оплаты', default=OrderPaymentType.CARD)
+    status = models.CharField(choices=OrderStatus.choices, max_length=20,
+                              verbose_name='Тип оплаты', default=OrderStatus.CREATED)
     comment = models.TextField(verbose_name='Комментарий', blank=True)
     created_at = models.DateTimeField(default=timezone.now, verbose_name='Дата создания', blank=True)
     processed_at = models.DateTimeField(verbose_name='Дата звонка', validators=[MinValueValidator(created_at)],
                                         blank=True, null=True)
     delivered_at = models.DateTimeField(verbose_name='Дата доставки', validators=[MinValueValidator(created_at)],
                                         blank=True, null=True)
-
+    cook = models.ForeignKey(to=Restaurant, on_delete=models.SET_NULL, null=True, blank=True,
+                             verbose_name='Где приготовлен', related_name='cook_orders')
     objects = OrderQueryset.as_manager()
 
     class Meta:
@@ -163,14 +171,25 @@ class Order(models.Model):
     def __str__(self):
         return f"{self.last_name} {self.first_name} - {self.address}"
 
-    def get_status(self):
-        """Метод для получения статуса заказа для менеджера"""
+    def update_status(self):
+        """Метод для обновления статуса заказа для менеджера"""
         if self.delivered_at:
-            return 'Завершён'
+            self.status = self.OrderStatus.DELIVERED
+            self.save()
+            return self.status
+        elif self.cook:
+            self.status = self.OrderStatus.COOKING
+            self.save()
+            return self
         elif self.processed_at:
-            return 'Обработан'
+            self.status = self.OrderStatus.PROCESSED
+            self.save()
+            return self.status
         else:
-            return 'Создан'
+            self.status = self.OrderStatus.CREATED
+            self.save()
+            return self.status
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(to='Order', on_delete=models.CASCADE, verbose_name="Заказ", related_name="items")
