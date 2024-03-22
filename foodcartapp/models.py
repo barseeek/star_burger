@@ -135,14 +135,24 @@ class OrderQueryset(models.QuerySet):
 
 
 class Order(models.Model):
+    CASH = 'cash'
+    CARD = 'card'
+    PAYMENT_CHOICES = [
+        (CASH, 'Наличные'),
+        (CARD, 'Картой онлайн')
+    ]
     address = models.CharField(max_length=255, verbose_name='Адрес')
     first_name = models.CharField(max_length=255, verbose_name='Имя')
     last_name = models.CharField(max_length=255, verbose_name='Фамилия')
     phone = PhoneNumberField(verbose_name='Мобильный номер')
+    payment_type = models.CharField(choices=PAYMENT_CHOICES, max_length=10,
+                                    verbose_name='Тип оплаты', default=CARD)
     comment = models.TextField(verbose_name='Комментарий', blank=True)
     created_at = models.DateTimeField(default=timezone.now, verbose_name='Дата создания', blank=True)
-    processed_at = models.DateTimeField(verbose_name='Дата звонка', blank=True, null=True)
-    delivered_at = models.DateTimeField(verbose_name='Дата доставки', blank=True, null=True)
+    processed_at = models.DateTimeField(verbose_name='Дата звонка', validators=[MinValueValidator(created_at)],
+                                        blank=True, null=True)
+    delivered_at = models.DateTimeField(verbose_name='Дата доставки', validators=[MinValueValidator(created_at)],
+                                        blank=True, null=True)
 
     objects = OrderQueryset.as_manager()
 
@@ -153,6 +163,14 @@ class Order(models.Model):
     def __str__(self):
         return f"{self.last_name} {self.first_name} - {self.address}"
 
+    def get_status(self):
+        """Метод для получения статуса заказа для менеджера"""
+        if self.delivered_at:
+            return 'Завершён'
+        elif self.processed_at:
+            return 'Обработан'
+        else:
+            return 'Создан'
 
 class OrderItem(models.Model):
     order = models.ForeignKey(to='Order', on_delete=models.CASCADE, verbose_name="Заказ", related_name="items")

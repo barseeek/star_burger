@@ -15,22 +15,27 @@
    <table class="table table-responsive">
     <tr>
       <th>ID заказа</th>
+      <th>Статус заказа</th>
       <th>Стоимость заказа</th>
+      <th>Способ оплаты</th>
       <th>Клиент</th>
       <th>Телефон</th>
       <th>Адрес доставки</th>
       <th> Редактировать</th>
+      <th> Комментарий</th>
     </tr>
 
     {% for item in order_items %}
       <tr>
         <td>{{ item.pk }}</td>
+        <td>{{ item.get_status }}</td>
         <td>{{ item.price }} руб.</td>
+        <td>{{ item.get_payment_type_display }}</td>        
         <td>{{ item.last_name }} {{ item.first_name }}</td>
         <td>{{ item.phone }}</td>
         <td>{{ item.address }}</td>
         <td><a href="{% url "admin:foodcartapp_order_change" object_id=item.pk  %}?next={{ request.get_full_path|urlencode }}">Редактировать</a></td>
-
+        <td>{{ item.comment }}</td>
       </tr>
     {% endfor %}
    </table>
