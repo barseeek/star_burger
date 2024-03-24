@@ -28,29 +28,29 @@
 
     {% for item in items %}
       <tr>
-        <td>{{ item.order.pk }}</td>
-        <td>{{ item.order.get_status_display }}</td>
-        <td>{{ item.order.price }} руб.</td>
-        <td>{{ item.order.get_payment_type_display }}</td>
-        <td>{{ item.order.last_name }} {{ item.order.first_name }}</td>
-        <td>{{ item.order.phone }}</td>
-        <td>{{ item.order.address }}</td>
+        <td>{{ item.pk }}</td>
+        <td>{{ item.get_status_display }}</td>
+        <td>{{ item.price }} руб.</td>
+        <td>{{ item.get_payment_type_display }}</td>
+        <td>{{ item.last_name }} {{ item.first_name }}</td>
+        <td>{{ item.phone }}</td>
+        <td>{{ item.address }}</td>
         <td>
-          {% if item.order.cook %}
-            {{ item.order.cook }}
+          {% if item.cook %}
+            Готовит <b>{{ item.cook }} </b>
           {% elif item.restaurants %}
             <details>
               <summary>Может быть приготовлен в:</summary>
                 {% for restaurant in item.restaurants %}
-                 <li>{{restaurant}}</li>
+                 <li>{{ restaurant.name }} - {{ restaurant.msg }}</li>
                 {% endfor %}
             </details>
             {% else %}
               Нет доступных ресторанов
           {% endif %}
         </td>
-        <td><a href="{% url "admin:foodcartapp_order_change" object_id=item.order.pk  %}?next={{ request.get_full_path|urlencode }}">Редактировать</a></td>
-        <td>{{ item.order.comment }}</td>
+        <td><a href="{% url "admin:foodcartapp_order_change" object_id=item.pk  %}?next={{ request.get_full_path|urlencode }}">Редактировать</a></td>
+        <td>{{ item.comment }}</td>
       </tr>
     {% endfor %}
    </table>

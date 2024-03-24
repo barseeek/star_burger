@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from django import forms
 from django.db.models import F, Prefetch
 from django.shortcuts import redirect, render
@@ -9,9 +7,12 @@ from django.contrib.auth.decorators import user_passes_test
 
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
+from geopy.distance import distance
 
+from foodcartapp.coordinates import fetch_coordinates
 from foodcartapp.models import Product, Restaurant, Order, RestaurantMenuItem, OrderItem
-
+from star_burger import settings
+from requests.exceptions import ConnectionError, HTTPError
 
 class Login(forms.Form):
     username = forms.CharField(
@@ -107,13 +108,37 @@ def view_orders(request):
                 to_attr='available_restaurants'
             )
         )
-        restaurant_sets = [set(item.product.menu_items.values_list('restaurant__name', flat=True)) for item in
+        restaurant_sets = [set(item.product.menu_items.values_list('restaurant__name', 'restaurant__address')) for item in
                            order_items]
         common_restaurants = set.intersection(*restaurant_sets) if restaurant_sets else set()
-        items.append({
-            'order': order,
-            'restaurants': list(common_restaurants),
-        })
+        order_coordinates = None, None
+        try:
+            order_coordinates = fetch_coordinates(settings.YANDEX_API_KEY, order.address)
+        except HTTPError:
+            pass
+        except ConnectionError:
+            pass
+        order.restaurants = []
+        for restaurant in list(common_restaurants):
+            rest_name, rest_address = restaurant[0], restaurant[1]
+            restaurant_coordinates = None, None
+            try:
+                restaurant_coordinates = fetch_coordinates(settings.YANDEX_API_KEY, rest_address)
+            except HTTPError:
+                pass
+            except ConnectionError:
+                pass
+            distance_km = None
+            if restaurant_coordinates and order_coordinates:
+                distance_km = distance(order_coordinates, restaurant_coordinates).km
+            serialized_rest = {
+                'name': rest_name,
+                'distance_km': distance_km,
+                'msg': "{:.2f} км".format(distance_km) if distance_km else 'Ошибка определения координат'
+            }
+            order.restaurants.append(serialized_rest)
+        order.restaurants.sort(key=lambda rest: rest['distance_km'])
+        items.append(order)
 
     return render(request, template_name='order_items.html', context={
         'items': items
