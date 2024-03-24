@@ -9,8 +9,9 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 from geopy.distance import distance
 
-from foodcartapp.coordinates import fetch_coordinates
+from foodcartapp.coordinates import fetch_coordinates, get_place_coordinates_by_address
 from foodcartapp.models import Product, Restaurant, Order, RestaurantMenuItem, OrderItem
+from places.models import Place
 from star_burger import settings
 from requests.exceptions import ConnectionError, HTTPError
 
@@ -100,6 +101,10 @@ def view_orders(request):
               exclude(status__exact=Order.OrderStatus.DELIVERED).
               annotate(price=Order.objects.total_price()).
               order_by('status'))
+    places = {
+        place.address: (place.lat, place.lon) if place.lat and place.lon else None
+        for place in Place.objects.all()
+    }
     for order in orders:
         order_items = OrderItem.objects.filter(order_id=order.id).prefetch_related(
             Prefetch(
@@ -111,24 +116,22 @@ def view_orders(request):
         restaurant_sets = [set(item.product.menu_items.values_list('restaurant__name', 'restaurant__address')) for item in
                            order_items]
         common_restaurants = set.intersection(*restaurant_sets) if restaurant_sets else set()
-        order_coordinates = None, None
-        try:
-            order_coordinates = fetch_coordinates(settings.YANDEX_API_KEY, order.address)
-        except HTTPError:
-            pass
-        except ConnectionError:
-            pass
+        order_coordinates = places.get(order.address)
+        if order_coordinates in places:
+            order_coordinates = places[order.address]
+        else:
+            get_place_coordinates_by_address(settings.YANDEX_API_KEY, order.address)
         order.restaurants = []
         for restaurant in list(common_restaurants):
             rest_name, rest_address = restaurant[0], restaurant[1]
-            restaurant_coordinates = None, None
-            try:
-                restaurant_coordinates = fetch_coordinates(settings.YANDEX_API_KEY, rest_address)
-            except HTTPError:
-                pass
-            except ConnectionError:
-                pass
+            restaurant_coordinates = places.get(rest_address)
+            if restaurant_coordinates in places:
+                restaurant_coordinates = places[rest_address]
+            else:
+                get_place_coordinates_by_address(settings.YANDEX_API_KEY, rest_address)
+
             distance_km = None
+
             if restaurant_coordinates and order_coordinates:
                 distance_km = distance(order_coordinates, restaurant_coordinates).km
             serialized_rest = {

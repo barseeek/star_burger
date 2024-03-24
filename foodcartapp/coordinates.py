@@ -1,4 +1,8 @@
 import requests
+from requests import HTTPError
+
+from places.models import Place
+from star_burger import settings
 
 
 def fetch_coordinates(apikey, address):
@@ -16,4 +20,18 @@ def fetch_coordinates(apikey, address):
 
     most_relevant = found_places[0]
     lon, lat = most_relevant['GeoObject']['Point']['pos'].split(" ")
+    return lat, lon
+
+
+def get_place_coordinates_by_address(apikey, address):
+    try:
+        restaurant_coordinates = fetch_coordinates(settings.YANDEX_API_KEY, address)
+    except HTTPError:
+        restaurant_coordinates = None
+    except ConnectionError:
+        restaurant_coordinates = None
+    lat, lon = restaurant_coordinates if restaurant_coordinates else (None, None)
+    Place.objects.get_or_create(
+        address=address, defaults={'lat': lat, 'lon': lon}
+    )
     return lat, lon
