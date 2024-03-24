@@ -141,10 +141,10 @@ class Order(models.Model):
         CARD = 'card', _('Картой онлайн')
 
     class OrderStatus(models.TextChoices):
-        CREATED = 'created', _('Создан')
-        PROCESSED = 'processed', _('Обработан')
-        COOKING = 'cooking', _('Готовится')
-        DELIVERED = 'delivered', _('Доставлен')
+        CREATED = '1_created', _('Создан')
+        PROCESSED = '2_processed', _('Обработан')
+        COOKING = '3_cooking', _('Готовится')
+        DELIVERED = '4_delivered', _('Доставлен')
 
     address = models.CharField(max_length=255, verbose_name='Адрес')
     first_name = models.CharField(max_length=255, verbose_name='Имя')
@@ -153,12 +153,12 @@ class Order(models.Model):
     payment_type = models.CharField(choices=OrderPaymentType.choices, max_length=10,
                                     verbose_name='Тип оплаты', default=OrderPaymentType.CARD)
     status = models.CharField(choices=OrderStatus.choices, max_length=20,
-                              verbose_name='Тип оплаты', default=OrderStatus.CREATED)
+                              verbose_name='Статус', default=OrderStatus.CREATED)
     comment = models.TextField(verbose_name='Комментарий', blank=True)
     created_at = models.DateTimeField(default=timezone.now, verbose_name='Дата создания', blank=True)
-    processed_at = models.DateTimeField(verbose_name='Дата звонка', validators=[MinValueValidator(created_at)],
+    processed_at = models.DateTimeField(verbose_name='Дата звонка',
                                         blank=True, null=True)
-    delivered_at = models.DateTimeField(verbose_name='Дата доставки', validators=[MinValueValidator(created_at)],
+    delivered_at = models.DateTimeField(verbose_name='Дата доставки',
                                         blank=True, null=True)
     cook = models.ForeignKey(to=Restaurant, on_delete=models.SET_NULL, null=True, blank=True,
                              verbose_name='Где приготовлен', related_name='cook_orders')
@@ -170,25 +170,6 @@ class Order(models.Model):
 
     def __str__(self):
         return f"{self.last_name} {self.first_name} - {self.address}"
-
-    def update_status(self):
-        """Метод для обновления статуса заказа для менеджера"""
-        if self.delivered_at:
-            self.status = self.OrderStatus.DELIVERED
-            self.save()
-            return self.status
-        elif self.cook:
-            self.status = self.OrderStatus.COOKING
-            self.save()
-            return self
-        elif self.processed_at:
-            self.status = self.OrderStatus.PROCESSED
-            self.save()
-            return self.status
-        else:
-            self.status = self.OrderStatus.CREATED
-            self.save()
-            return self.status
 
 
 class OrderItem(models.Model):

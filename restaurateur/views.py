@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from django import forms
-from django.db.models import F
+from django.db.models import F, Prefetch
 from django.shortcuts import redirect, render
 from django.views import View
 from django.urls import reverse_lazy
@@ -94,32 +94,27 @@ def view_restaurants(request):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
-    rests = []
-    # available_products = RestaurantMenuItem.objects.filter(product__in=Product.objects.available())
-    # orders = Order.objects.all().annotate(price=Order.objects.total_price()).prefetch_related('items__product')
-    # for order in orders:
-    #     available_products = RestaurantMenuItem.objects.filter(product__in=OrderItem.objects.filter(product=), availability=True)
-    #     rests = [product.restaurant for product in available_products]
+    items = []
+    orders = (Order.objects.
+              exclude(status__exact=Order.OrderStatus.DELIVERED).
+              annotate(price=Order.objects.total_price()).
+              order_by('status'))
+    for order in orders:
+        order_items = OrderItem.objects.filter(order_id=order.id).prefetch_related(
+            Prefetch(
+                'product__menu_items',
+                queryset=RestaurantMenuItem.objects.filter(availability=True).select_related('restaurant'),
+                to_attr='available_restaurants'
+            )
+        )
+        restaurant_sets = [set(item.product.menu_items.values_list('restaurant__name', flat=True)) for item in
+                           order_items]
+        common_restaurants = set.intersection(*restaurant_sets) if restaurant_sets else set()
+        items.append({
+            'order': order,
+            'restaurants': list(common_restaurants),
+        })
 
-    # Словарь для хранения возможных ресторанов для каждого заказа
-    order_restaurants = defaultdict(set)
-
-    for item in OrderItem.objects.select_related('order', 'product').all():
-        possible_restaurants = RestaurantMenuItem.objects.filter(
-            product=item.product,
-            availability=True
-        ).values_list('restaurant_id', flat=True)
-
-        if item.order_id not in order_restaurants or not order_restaurants[item.order_id]:
-            order_restaurants[item.order_id] = set(possible_restaurants)
-        else:
-            order_restaurants[item.order_id].intersection_update(possible_restaurants)
-
-    orders_with_restaurants = [{
-        'order': Order.objects.get(id=order_id),
-        'price': Order.objects.total_price(),
-        'restaurants': Restaurant.objects.filter(id__in=restaurant_ids)
-    } for order_id, restaurant_ids in order_restaurants.items()]
     return render(request, template_name='order_items.html', context={
-        'items': orders_with_restaurants
+        'items': items
     })

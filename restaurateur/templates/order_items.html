@@ -26,7 +26,7 @@
       <th> Комментарий</th>
     </tr>
 
-    {% for item in items|dictsortreversed:"order.status" %}
+    {% for item in items %}
       <tr>
         <td>{{ item.order.pk }}</td>
         <td>{{ item.order.get_status_display }}</td>
