@@ -1,5 +1,5 @@
 from django.db import models
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models import F, Sum
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -176,9 +176,9 @@ class OrderItem(models.Model):
     order = models.ForeignKey(to='Order', on_delete=models.CASCADE, verbose_name="Заказ", related_name="items")
     product = models.ForeignKey(to='Product', on_delete=models.SET_DEFAULT, null=True, verbose_name="Товар",
                                 default=None)
-    quantity = models.PositiveIntegerField(verbose_name='Количество')
+    quantity = models.PositiveIntegerField(verbose_name='Количество', validators=[MinValueValidator(1)])
     price = models.DecimalField(max_digits=7, decimal_places=2, verbose_name='Стоимость',
-                                validators=[MinValueValidator(0)], null=True)
+                                validators=[MinValueValidator(0)])
 
     class Meta:
         verbose_name = 'Элемент заказа'
