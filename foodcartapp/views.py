@@ -63,16 +63,20 @@ def product_list_api(request):
 
 @api_view(['POST'])
 def register_order(request):
+    # serializer = OrderSerializer(data=request.data)
+    # serializer.is_valid(raise_exception=True)
+    # with transaction.atomic():
+    #     order = Order.objects.create(
+    #         first_name=serializer.validated_data['first_name'],
+    #         last_name=serializer.validated_data['last_name'],
+    #         phone=serializer.validated_data['phone'],
+    #         address=serializer.validated_data['address']
+    #     )
+    #     order_items_fields = serializer.validated_data['products']
+    #     order_items = [OrderItem(order=order, price=fields['product'].price, **fields) for fields in order_items_fields]
+    #     OrderItem.objects.bulk_create(order_items)
+    # return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
     serializer = OrderSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    with transaction.atomic():
-        order = Order.objects.create(
-            first_name=serializer.validated_data['first_name'],
-            last_name=serializer.validated_data['last_name'],
-            phone=serializer.validated_data['phone'],
-            address=serializer.validated_data['address']
-        )
-        order_items_fields = serializer.validated_data['products']
-        order_items = [OrderItem(order=order, price=fields['product'].price, **fields) for fields in order_items_fields]
-        OrderItem.objects.bulk_create(order_items)
+    order = serializer.save()
     return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
