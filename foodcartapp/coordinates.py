@@ -26,9 +26,7 @@ def fetch_coordinates(apikey, address):
 def get_place_coordinates_by_address(apikey, address):
     try:
         restaurant_coordinates = fetch_coordinates(settings.YANDEX_API_KEY, address)
-    except HTTPError:
-        restaurant_coordinates = None
-    except ConnectionError:
+    except (HTTPError, ConnectionError):
         restaurant_coordinates = None
     lat, lon = restaurant_coordinates if restaurant_coordinates else (None, None)
     Place.objects.get_or_create(

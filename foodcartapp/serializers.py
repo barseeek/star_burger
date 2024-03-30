@@ -1,5 +1,6 @@
 import phonenumbers
 from django.db import transaction
+from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
@@ -23,7 +24,7 @@ class OrderSerializer(ModelSerializer):
     products = OrderItemSerializer(many=True, allow_empty=False, write_only=True)
     firstname = serializers.CharField(source='first_name')
     lastname = serializers.CharField(source='last_name')
-    phonenumber = serializers.CharField(source='phone')
+    phonenumber = PhoneNumberField(source='phone')
     address = serializers.CharField()
 
     class Meta:
@@ -36,17 +37,7 @@ class OrderSerializer(ModelSerializer):
         validated_data.pop('products')
         order = Order.objects.create(**validated_data)
         for item_data in products_data:
-            #OrderItem.objects.create(order=order, price=item_data['product'].price, **item_data)
             order_item = OrderItemSerializer(data=item_data)
             order_item.is_valid(raise_exception=True)
             order_item.save(order=order, price=Product.objects.get(pk=item_data['product']).price)
         return order
-
-    def validate_phonenumber(self, value):
-        try:
-            phone_number = phonenumbers.parse(value, 'RU')
-            if not phonenumbers.is_valid_number(phone_number):
-                raise serializers.ValidationError("Invalid phone number")
-            return phonenumbers.format_number(phone_number, phonenumbers.PhoneNumberFormat.E164)
-        except phonenumbers.NumberParseException:
-            raise serializers.ValidationError("Invalid phone number")
