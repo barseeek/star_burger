@@ -117,18 +117,18 @@ def view_orders(request):
                            order_items]
         common_restaurants = set.intersection(*restaurant_sets) if restaurant_sets else set()
         order_coordinates = places.get(order.address)
-        if order_coordinates in places:
-            order_coordinates = places[order.address]
-        else:
-            get_place_coordinates_by_address(settings.YANDEX_API_KEY, order.address)
+        # if order_coordinates in places:
+        #     order_coordinates = places[order.address]
+        # else:
+        #     pass#get_place_coordinates_by_address(settings.YANDEX_API_KEY, order.address)
         order.restaurants = []
         for restaurant in list(common_restaurants):
             rest_name, rest_address = restaurant[0], restaurant[1]
             restaurant_coordinates = places.get(rest_address)
-            if restaurant_coordinates in places:
-                restaurant_coordinates = places[rest_address]
-            else:
-                get_place_coordinates_by_address(settings.YANDEX_API_KEY, rest_address)
+            # if restaurant_coordinates in places:
+            #     restaurant_coordinates = places[rest_address]
+            # else:
+            #     pass#get_place_coordinates_by_address(settings.YANDEX_API_KEY, rest_address)
 
             distance_km = None
 

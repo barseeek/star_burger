@@ -29,7 +29,4 @@ def get_place_coordinates_by_address(apikey, address):
     except (HTTPError, ConnectionError):
         restaurant_coordinates = None
     lat, lon = restaurant_coordinates if restaurant_coordinates else (None, None)
-    Place.objects.get_or_create(
-        address=address, defaults={'lat': lat, 'lon': lon}
-    )
     return lat, lon

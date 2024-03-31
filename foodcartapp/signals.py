@@ -12,12 +12,8 @@ from places.models import Place
 
 @receiver(pre_save, sender=Order)
 def pre_save_order(sender, instance, **kwargs):
-    try:
-        place = Place.objects.get(address=instance.address)
-    except Place.DoesNotExist:
-        place = None
-    if place:
+    lat, lon = get_place_coordinates_by_address(settings.YANDEX_API_KEY, instance.address)
+    place, created = Place.objects.get_or_create(address=instance.address, defaults={'lat': lat, 'lon': lon})
+    if not created:
         place.updated_at = timezone.now()
-    else:
-        get_place_coordinates_by_address(settings.YANDEX_API_KEY, instance.address)
-
+        place.save()
