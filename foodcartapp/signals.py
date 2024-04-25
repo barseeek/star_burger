@@ -1,12 +1,10 @@
-from django.db.models import Sum
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.utils import timezone
-from requests import HTTPError
 
 from star_burger import settings
-from .coordinates import fetch_coordinates, get_place_coordinates_by_address
-from .models import Order, OrderItem
+from .coordinates import get_place_coordinates_by_address
+from .models import Order
 from places.models import Place
 
 
