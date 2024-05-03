@@ -128,8 +128,8 @@ PHONENUMBER_DEFAULT_REGION = 'RU'
 YANDEX_API_KEY = env.str('YANDEX_API_KEY')
 
 ROLLBAR = {
-    'access_token': env.str('ROLLBAR_ACCESS_TOKEN'),
-    'environment': env.str('ROLLBAR_ENVIRONMENT'),
+    'access_token': env.str('ROLLBAR_ACCESS_TOKEN', ''),
+    'environment': env.str('ROLLBAR_ENVIRONMENT', ''),
     'code_version': '1.0',
     'root': BASE_DIR,
 }
