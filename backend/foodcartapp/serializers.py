@@ -1,11 +1,9 @@
-import phonenumbers
 from django.db import transaction
 from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
-from foodcartapp.models import Product, OrderItem, Order
-
+from .models import Product, OrderItem, Order
 
 class OrderItemSerializer(ModelSerializer):
     product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())

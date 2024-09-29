@@ -1,8 +1,7 @@
 import requests
 from requests import HTTPError
 
-from places.models import Place
-from star_burger import settings
+from django.conf import settings
 
 
 def fetch_coordinates(apikey, address):

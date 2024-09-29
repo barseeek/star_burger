@@ -84,7 +84,7 @@ MEDIA_URL = '/media/'
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=env.str('DB_URL', 'sqlite:////{0}'.format(os.path.join(BASE_DIR, 'db.sqlite3')))
+        default=env.str('DB_URL', 'sqlite:////{0}'.format(os.path.join(BASE_DIR, '../../db.sqlite3')))
     )
 }
 
@@ -125,11 +125,11 @@ STATICFILES_DIRS = [
 ]
 
 PHONENUMBER_DEFAULT_REGION = 'RU'
-YANDEX_API_KEY = env.str('YANDEX_API_KEY')
+YANDEX_API_KEY = env.str('YANDEX_API_KEY', '')
 
 ROLLBAR = {
     'access_token': env.str('ROLLBAR_ACCESS_TOKEN', ''),
-    'environment': env.str('ROLLBAR_ENVIRONMENT', ''),
+    'environment': env.str('ROLLBAR_ENVIRONMENT', 'development'),
     'code_version': '1.0',
     'root': BASE_DIR,
 }

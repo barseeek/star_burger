@@ -6,4 +6,4 @@ class FoodcartappConfig(AppConfig):
     name = 'foodcartapp'
 
     def ready(self):
-        import foodcartapp.signals
+        pass

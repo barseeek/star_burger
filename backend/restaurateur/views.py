@@ -9,11 +9,8 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 from geopy.distance import distance
 
-from foodcartapp.coordinates import fetch_coordinates, get_place_coordinates_by_address
 from foodcartapp.models import Product, Restaurant, Order, RestaurantMenuItem, OrderItem
 from places.models import Place
-from star_burger import settings
-from requests.exceptions import ConnectionError, HTTPError
 
 class Login(forms.Form):
     username = forms.CharField(
@@ -35,7 +32,7 @@ class Login(forms.Form):
 class LoginView(View):
     def get(self, request, *args, **kwargs):
         form = Login()
-        return render(request, "login.html", context={
+        return render(request, "templates/login.html", context={
             'form': form
         })
 
@@ -53,7 +50,7 @@ class LoginView(View):
                     return redirect("restaurateur:RestaurantView")
                 return redirect("start_page")
 
-        return render(request, "login.html", context={
+        return render(request, "templates/login.html", context={
             'form': form,
             'ivalid': True,
         })
@@ -81,7 +78,7 @@ def view_products(request):
             (product, ordered_availability)
         )
 
-    return render(request, template_name="products_list.html", context={
+    return render(request, template_name="templates/products_list.html", context={
         'products_with_restaurant_availability': products_with_restaurant_availability,
         'restaurants': restaurants,
     })
@@ -89,13 +86,13 @@ def view_products(request):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_restaurants(request):
-    return render(request, template_name="restaurants_list.html", context={
+    return render(request, template_name="templates/restaurants_list.html", context={
         'restaurants': Restaurant.objects.all(),
     })
 
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
-def view_orders(request): 
+def view_orders(request):
     items = []
     orders = (Order.objects.
               exclude(status__exact=Order.OrderStatus.DELIVERED).
@@ -143,6 +140,6 @@ def view_orders(request):
         order.restaurants.sort(key=lambda rest: rest['distance_km'])
         items.append(order)
 
-    return render(request, template_name='order_items.html', context={
+    return render(request, template_name='templates/order_items.html', context={
         'items': items
     })
