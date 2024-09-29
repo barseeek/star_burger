@@ -13,6 +13,8 @@ services:
     command: bash -c "python manage.py collectstatic --no-input && python manage.py migrate && python -m gunicorn -b 0.0.0.0:8080 star_burger.wsgi:application"
     ports:
       - "8080:8080"
+    volumes:
+      - ./static:/app/staticfiles
     env_file: .env
     depends_on:
       - db
@@ -24,7 +26,7 @@ services:
     command: node_modules/.bin/parcel watch bundles-src/index.js --dist-dir bundles --public-url="./"
     volumes:
       - ./frontend/bundles-src/:/frontend/bundles-src/
-      - ./bundles:/frontend/bundles
+      - ./static:/frontend/bundles
 
 volumes:
   db_data:
