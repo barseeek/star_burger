@@ -15,6 +15,7 @@ services:
       - "8080:8080"
     volumes:
       - ./static:/app/staticfiles
+      - ./media:/app/media
     env_file: .env
     depends_on:
       - db
