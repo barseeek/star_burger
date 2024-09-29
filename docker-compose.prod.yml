@@ -20,6 +20,7 @@ services:
     depends_on:
       - db
       - frontend
+    restart: always
   frontend:
     container_name: star_burger_frontend
     build:
@@ -28,7 +29,7 @@ services:
     volumes:
       - ./frontend/bundles-src/:/frontend/bundles-src/
       - ./static:/frontend/bundles
-
+    restart: always
 volumes:
   db_data:
 
