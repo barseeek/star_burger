@@ -120,9 +120,10 @@ INTERNAL_IPS = [
 ]
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "assets"),
-    os.path.join(BASE_DIR, "bundles"),
+    os.path.join(BASE_DIR, "assets")
 ]
+if DEBUG:
+    STATICFILES_DIRS.append(os.path.join(BASE_DIR, "bundles"))
 
 PHONENUMBER_DEFAULT_REGION = 'RU'
 YANDEX_API_KEY = env.str('YANDEX_API_KEY', '')
