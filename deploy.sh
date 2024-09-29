@@ -1,5 +1,5 @@
 #!/bin/bash
-cd /opt/star-burger/
+cd /opt/star_burger/
 docker compose down
 git pull
 docker compose -f docker-compose.prod.yml build

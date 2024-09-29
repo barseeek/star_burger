@@ -14,6 +14,119 @@
 
 Третий интерфейс — это админка. Преимущественно им пользуются программисты при разработке сайта. Также сюда заходит менеджер, чтобы обновить меню ресторанов Star Burger.
 
+# Сборка сайта с помощью Docker
+
+## Сборка локальной версии сайта
+
+1. Загрузите репозиторий:
+    ```sh
+    git clone https://github.com/barseeek/star_burger.git
+    ```
+2. Создайте файл в корне проекта `.env`по шаблону из `.env.template`
+3. Соберите и запустите образы
+    ```sh
+    docker compose -f docker-compose.dev.yml build
+    docker compose -f docker-compose.dev.yml up -d
+    ```
+4. Создайте супер пользователя:
+    ```shell
+    docker exec -it star_burger_web python manage.py createsuperuser
+    ```
+Сайт будет доступен по адресу [127.0.0.1:8080](http://127.0.0.1:8080)
+
+
+## Сборка на сервере
+1. Загрузите репозиторий:
+    ```sh
+    git clone https://github.com/barseeek/star_burger.git
+    ```
+2. Создайте в корне проекта файл `.env`по шаблону из `.env.template`
+3. Установите и настройте nginx, ниже пример конфигурационного файла для http
+    ```
+    server {
+        listen 80;
+        server_name your_ip;
+
+        location / {
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_pass http://127.0.0.1:8080/;
+        }
+
+        location /media/ {
+            alias {your_path_to_media}/media/;
+        }
+
+        location /static/ {
+            alias {your_path_to_staticfiles}/static/;
+        }
+
+    }
+    ```
+4. Соберите и запустите образы
+    ```sh
+    docker compose -f docker-compose.prod.yml build
+    docker compose -f docker-compose.prod.yml up -d
+    ```
+5. Создайте суперпользователя:
+    ```shell
+    docker exec -it star_burger_web python manage.py createsuperuser
+    ```
+    Сайт будет доступен по адресу вашего сервера на порту 80.
+6. Для настройки https можно использовать [Certbot](https://certbot.eff.org/instructions?ws=nginx&os=snap).
+    Итоговый конфиг для nginx представлен ниже
+    ```shell
+    server {
+    listen 80;
+    listen [::]:80;
+    server_name starburger.barskiy.pro;
+
+    # Перенаправление всего трафика на HTTPS
+    return 301 https://$host$request_uri;
+    }
+
+    # Серверный блок для обработки HTTPS-запросов
+    server {
+        listen 443 ssl http2;
+        listen [::]:443 ssl http2;
+        server_name starburger.barskiy.pro;
+
+        # SSL-настройки, управляемые Certbot
+        ssl_certificate /etc/letsencrypt/live/starburger.barskiy.pro/fullchain.pem; # managed by Certbot
+        ssl_certificate_key /etc/letsencrypt/live/starburger.barskiy.pro/privkey.pem; # managed by Certbot
+        include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+        ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+        # Обработка статических файлов
+        location /static/ {
+            alias /opt/star_burger/static/;
+            expires 30d;
+            access_log off;
+        }
+
+        location /media/ {
+            alias /opt/star_burger/media/;
+            expires 30d;
+            access_log off;
+        }
+
+        # Основное проксирование запросов к приложению
+        location / {
+            proxy_pass http://127.0.0.1:8080;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+    ```
+7. Для обновления кода на сервере можно запустить скрипт `deploy.sh`
+
+
+
+
 ## Как запустить dev-версию сайта
 
 Для запуска сайта нужно запустить **одновременно** бэкенд и фронтенд, в двух терминалах.
